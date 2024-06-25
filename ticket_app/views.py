@@ -54,3 +54,24 @@ class TicketDeleteView(APIView):
         ticket.delete()
         return Response({"response": "You have deleted your ticket successfully",
                          "status": status.HTTP_200_OK})
+
+
+class TicketFilteringView(APIView):
+    def get(self, request):
+        flying_from = request.GET.get("flying_from")
+        flying_to = request.GET.get("flying_to")
+        departing = request.GET.get("departing")
+        trip_type = request.GET.get("trip_type")  # oneway, round
+        trip_class = request.GET.get("trip_class")
+
+        passengers = request.GET.get("passengers")
+        passengers_list = passengers.split(",")
+        passengers_dict = {}
+
+        for passenger in passengers_list:
+            key, value = passenger.split(":")
+            key = key.strip()
+            value = [int(v) for v in value.split()]
+            passengers_dict[key] = value
+            
+        return Response(passengers_dict)

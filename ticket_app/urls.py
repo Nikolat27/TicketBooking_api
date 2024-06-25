@@ -7,5 +7,5 @@ urlpatterns = [
     path("ticket_retrieve/<int:pk>", views.TicketDetailView.as_view()),
     path("ticket_update/<int:pk>", views.TicketDeleteView.as_view()),
     path("ticket_delete/<int:pk>", views.TicketDeleteView.as_view()),
-
+    path("filter", views.TicketFilteringView.as_view()),
 ]
