@@ -1,3 +1,4 @@
+from django.db.models import F, Count
 from django.shortcuts import render, get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -56,7 +57,9 @@ class TicketDeleteView(APIView):
                          "status": status.HTTP_200_OK})
 
 
-class TicketFilteringView(APIView):
+class TicketFilteringView(APIView, PageNumberPagination):
+    page_size = 1
+
     def get(self, request):
         flying_from = request.GET.get("flying_from")
         flying_to = request.GET.get("flying_to")
@@ -74,10 +77,15 @@ class TicketFilteringView(APIView):
             value = [int(v) for v in value.split()]
             passengers_dict[key] = value
 
-        total_passengers = sum(len(passenger) for passenger in passengers_dict.values())
+        passengers_count = sum(len(passenger) for passenger in passengers_dict.values())
 
-        # ticket = Ticket.objects.filter(departing_date_date=departing, arrival=flying_from, departure=flying_to,
-        #                                ticket_type=trip_type, cabin_class=trip_class)
-        ticket = Ticket.objects.get(departing_date__date='2024-06-23')
-        print(ticket.free_seats())
-        return Response(passengers_dict)
+        tickets = Ticket.objects.annotate(
+            total_booked=Count('tickets_booked__passengers')
+        ).filter(total_booked__lte=F('total_passengers') - passengers_count)  # F is model field value
+
+        if flying_from and flying_to and departing and trip_type and trip_class:
+            tickets = tickets.filter(departing_date__date=departing, arrival=flying_from, departure=flying_to,
+                                     ticket_type=trip_type, cabin_class=trip_class).order_by("-id").distinct()
+        paginated_queryset = self.paginate_queryset(tickets, request=request)
+        serializer = serializers.TicketSerializer(paginated_queryset, many=True)
+        return self.get_paginated_response(serializer.data)
