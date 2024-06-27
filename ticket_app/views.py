@@ -60,7 +60,7 @@ class TicketFilteringView(APIView):
     def get(self, request):
         flying_from = request.GET.get("flying_from")
         flying_to = request.GET.get("flying_to")
-        departing = request.GET.get("departing")
+        departing = request.GET.get("departing")  # Format: year-month-day
         trip_type = request.GET.get("trip_type")  # oneway, round
         trip_class = request.GET.get("trip_class")
 
@@ -73,5 +73,11 @@ class TicketFilteringView(APIView):
             key = key.strip()
             value = [int(v) for v in value.split()]
             passengers_dict[key] = value
-            
+
+        total_passengers = sum(len(passenger) for passenger in passengers_dict.values())
+
+        # ticket = Ticket.objects.filter(departing_date_date=departing, arrival=flying_from, departure=flying_to,
+        #                                ticket_type=trip_type, cabin_class=trip_class)
+        ticket = Ticket.objects.get(departing_date__date='2024-06-23')
+        print(ticket.free_seats())
         return Response(passengers_dict)

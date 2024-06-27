@@ -1,5 +1,8 @@
 from django.db import models
+from django.db.models import Min
 from django.utils import timezone
+
+from accounts_app.models import User
 
 
 # Create your models here.
@@ -53,3 +56,28 @@ class Ticket(models.Model):
         time_left = now - self.arriving_date
         hour = time_left.total_seconds() / 3600
         return round(hour, 2)
+
+    def passengers(self):  # Information of people who have booked this ticket
+        ticket_booked = self.tickets_booked.prefetch_related("passengers").values("passengers__type", "passengers__age")
+        return ticket_booked
+
+    def free_seats(self):  # How many seats have left
+        return self.total_passengers - len(self.passengers())
+
+
+class TicketBooked(models.Model):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="tickets_booked")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_tickets")
+
+    def __str__(self):
+        return f"{self.ticket.departure} - {self.ticket.arrival} - {self.user.username}"
+
+
+class Passengers(models.Model):
+    ticket_booked = models.ForeignKey(TicketBooked, on_delete=models.CASCADE, related_name="passengers")
+    age = models.PositiveIntegerField(null=True, blank=True, help_text="If the type is adult, keep this field NULL")
+    type = models.CharField(choices=[("adults", "Adult"), ("child", "Child"), ("infant", "Infant")],
+                            max_length=10)
+
+    def __str__(self):
+        return f"{self.ticket_booked.ticket} | Type: {self.type} - Age: {self.age}"
