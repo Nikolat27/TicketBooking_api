@@ -64,10 +64,10 @@ class TicketFilteringView(APIView, PageNumberPagination):
         flying_from = request.GET.get("flying_from")
         flying_to = request.GET.get("flying_to")
         departing = request.GET.get("departing")  # Format: year-month-day
-        trip_type = request.GET.get("trip_type")  # oneway, round
-        trip_class = request.GET.get("trip_class")
-
+        ticket_type = request.GET.get("ticket_type")  # one_way, round_trip
+        ticket_class = request.GET.get("ticket_class")
         passengers = request.GET.get("passengers")
+
         passengers_list = passengers.split(",")
         passengers_dict = {}
 
@@ -78,14 +78,26 @@ class TicketFilteringView(APIView, PageNumberPagination):
             passengers_dict[key] = value
 
         passengers_count = sum(len(passenger) for passenger in passengers_dict.values())
-
         tickets = Ticket.objects.annotate(
             total_booked=Count('tickets_booked__passengers')
         ).filter(total_booked__lte=F('total_passengers') - passengers_count)  # F is model field value
 
-        if flying_from and flying_to and departing and trip_type and trip_class:
-            tickets = tickets.filter(departing_date__date=departing, arrival=flying_from, departure=flying_to,
-                                     ticket_type=trip_type, cabin_class=trip_class).order_by("-id").distinct()
+        filter_params = {
+            'departure': flying_from,
+            'arrival': flying_to,
+            'departing_date__date': departing,
+            'ticket_type': ticket_type,
+            'cabin_class': ticket_class,
+        }
+
+        if ticket_type == "round_trip":
+            return_date = request.GET.get("return_date")
+            if return_date:
+                filter_params.update({
+                    'return_date__date': return_date
+                })
+
+        tickets = tickets.filter(**filter_params).order_by("-id").distinct()
         paginated_queryset = self.paginate_queryset(tickets, request=request)
         serializer = serializers.TicketSerializer(paginated_queryset, many=True)
         return self.get_paginated_response(serializer.data)

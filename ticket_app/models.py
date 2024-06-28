@@ -47,9 +47,10 @@ class Ticket(models.Model):
         return f"{self.ticket_type} - {self.departure} - {self.arrival}"
 
     def flight_duration(self):  # How long does it take to reach to the destination
-        total_duration = self.departing_date - self.arriving_date
-        total_duration = total_duration.total_seconds() / 3600
-        return round(total_duration, 2)
+        if self.departing_date and self.arriving_date:
+            total_duration = self.departing_date - self.arriving_date
+            total_duration = total_duration.total_seconds() / 3600
+            return round(total_duration, 2)
 
     def time_left(self):  # How much do we have to reach to the flight
         now = timezone.now()
