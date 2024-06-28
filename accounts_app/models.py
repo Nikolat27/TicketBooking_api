@@ -46,8 +46,6 @@ class User(AbstractBaseUser):
         max_length=255,
         unique=True
     )
-    order_count = models.IntegerField(default=0, null=True, blank=True)
-    total_buy = models.FloatField(default=0, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
 

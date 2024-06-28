@@ -1,17 +1,38 @@
+import jwt
 from django.db.models import F, Count
 from django.shortcuts import render, get_object_or_404
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
+from TicketBooking_api import settings
 from accounts_app.models import User
 from ticket_app import serializers
 from ticket_app.models import Ticket, TicketBooked
 
 
 # Create your views here.
+
+class CustomJWTAuthentication(BaseAuthentication):
+    def authenticate(self, request):
+        token = request.headers.get('Authorization', None)
+        if not token:
+            return None
+
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            print(payload)
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Token expired')
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed('Invalid token')
+
+        return (None, None)
+
 
 class TicketsView(APIView, PageNumberPagination):
     page_size = 1
@@ -42,7 +63,7 @@ class TicketDetailView(APIView):
 
 # Update
 class TicketUpdateView(APIView):
-    def put(self, pk, request):
+    def put(self, request, pk):
         ticket = get_object_or_404(Ticket, id=pk)
         serializer = serializers.TicketSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -107,9 +128,8 @@ class TicketFilteringView(APIView, PageNumberPagination):
 
 
 class TicketPurchaseView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def get(self, request, pk):
+        print(request.user)
         ticket = get_object_or_404(Ticket, id=pk)
         passengers = 'children:[12;13;15],adults:2,infants:1'
         passengers_list = passengers.split(",")
