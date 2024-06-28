@@ -1,11 +1,14 @@
 from django.db.models import F, Count
 from django.shortcuts import render, get_object_or_404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+
+from accounts_app.models import User
 from ticket_app import serializers
-from ticket_app.models import Ticket
+from ticket_app.models import Ticket, TicketBooked
 
 
 # Create your views here.
@@ -72,9 +75,9 @@ class TicketFilteringView(APIView, PageNumberPagination):
         passengers_dict = {}
 
         for passenger in passengers_list:
-            key, value = passenger.split(":")
-            key = key.strip()
-            value = [int(v) for v in value.split()]
+            key, value = passenger.split(",")
+            value = value.strip("[").strip("]").split(";")
+            value = [int(v) for v in value]
             passengers_dict[key] = value
 
         passengers_count = sum(len(passenger) for passenger in passengers_dict.values())
@@ -101,3 +104,29 @@ class TicketFilteringView(APIView, PageNumberPagination):
         paginated_queryset = self.paginate_queryset(tickets, request=request)
         serializer = serializers.TicketSerializer(paginated_queryset, many=True)
         return self.get_paginated_response(serializer.data)
+
+
+class TicketPurchaseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        ticket = get_object_or_404(Ticket, id=pk)
+        passengers = 'children:[12;13;15],adults:2,infants:1'
+        passengers_list = passengers.split(",")
+        passengers_dict = {}
+
+        for passenger in passengers_list:
+            key, value = passenger.split(":")
+            value = value.strip('[').strip("]").split(";")
+            value = [int(v) for v in value]
+            passengers_dict[key] = value
+        ticket = TicketBooked.objects.create(ticket=ticket, user=request.user)
+        for type, ages in passengers_dict.items():
+            for age in ages:
+                if type == "children":
+                    ticket.passengers.create(type=type, age=age)
+                else:
+                    for i in range(age):
+                        ticket.passengers.create(type=type)
+
+        return Response(passengers_dict)

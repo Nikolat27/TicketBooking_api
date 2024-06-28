@@ -77,8 +77,12 @@ class TicketBooked(models.Model):
 class Passengers(models.Model):
     ticket_booked = models.ForeignKey(TicketBooked, on_delete=models.CASCADE, related_name="passengers")
     age = models.PositiveIntegerField(null=True, blank=True, help_text="If the type is adult, keep this field NULL")
-    type = models.CharField(choices=[("adults", "Adult"), ("child", "Child"), ("infant", "Infant")],
+    type = models.CharField(choices=[("adults", "Adult"), ("children", "Child"), ("infants", "Infant")],
                             max_length=10)
+    first_name = models.CharField(max_length=75, null=True, blank=True)
+    last_name = models.CharField(max_length=75, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=[("female", "Female"), ("male", "Male")], null=True, blank=True)
 
     def __str__(self):
         return f"{self.ticket_booked.ticket} | Type: {self.type} - Age: {self.age}"
